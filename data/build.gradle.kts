@@ -1,9 +1,8 @@
 import Dependencies.AndroidX.implementCommonAndroidX
 import Dependencies.Kotlin.implementCommonKotlin
-import com.android.build.gradle.internal.api.BaseVariantOutputImpl
 
 plugins {
-    id("com.android.application")
+    id("com.android.library")
     id("kotlin-android")
 }
 
@@ -11,23 +10,14 @@ android {
     compileSdk = AppConfiguration.compileSdkVersion
 
     defaultConfig {
-        applicationId = "com.pinatafarms.app"
         minSdk = AppConfiguration.minSdkVersion
         targetSdk = AppConfiguration.targetSdkVersion
-        versionCode = AppConfiguration.versionCode
-        versionName = AppConfiguration.versionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
-        all {
-            applicationVariants.all {
-                outputs.all {
-                    (this as BaseVariantOutputImpl).outputFileName = "${name}-${versionName}(${versionCode}).apk"
-                }
-            }
-        }
         getByName("release") {
             isMinifyEnabled = false
             proguardFiles(
@@ -46,8 +36,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":data"))
     implementation(project(":domain"))
-    implementCommonAndroidX()
+
+    implementation(Dependencies.AndroidX.coreKtx)
     implementCommonKotlin()
 }
