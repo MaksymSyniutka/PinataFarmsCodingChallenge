@@ -1,9 +1,12 @@
-import Dependencies.AndroidX.implementCommonAndroidX
 import Dependencies.Kotlin.implementCommonKotlin
+import Dependencies.MLKit.implementMLKit
+import Dependencies.Serialization.implementSerialization
+import Dependencies.Testing.implementCommonTesting
 
 plugins {
     id("com.android.library")
     id("kotlin-android")
+    kotlin("plugin.serialization") version Versions.Serialization.kotlinSerializationPlugin
 }
 
 android {
@@ -38,6 +41,11 @@ android {
 dependencies {
     implementation(project(":domain"))
 
+    implementation(Dependencies.OtherThirdParty.timber)
     implementation(Dependencies.AndroidX.coreKtx)
+    implementSerialization()
     implementCommonKotlin()
+    implementMLKit()
+
+    implementCommonTesting()
 }
