@@ -36,6 +36,7 @@ class PersonListFragment : Fragment(), KoinComponent {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.viewData = PersonListViewData(isLoading = true)
 
         personListRecyclerAdapter = PersonListRecyclerAdapter { handlePersonListClick(it) }
         binding.recyclerView.adapter = personListRecyclerAdapter
@@ -43,6 +44,7 @@ class PersonListFragment : Fragment(), KoinComponent {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 personListViewModel.personList.onEach { result ->
+                    binding.viewData = PersonListViewData(isLoading = false)
                     result.onSuccess {
                         personListRecyclerAdapter.submit(it)
                     }.onFailure {
