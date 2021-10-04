@@ -7,4 +7,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "Pinata Farms Coding Challenge"
-include ':app'
+include(":app", ":domain", ":data")
