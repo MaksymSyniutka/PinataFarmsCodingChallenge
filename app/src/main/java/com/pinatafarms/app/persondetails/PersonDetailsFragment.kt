@@ -1,22 +1,24 @@
 package com.pinatafarms.app.persondetails
 
-import android.graphics.Bitmap
-import android.graphics.Color
-import android.graphics.Paint
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.graphics.applyCanvas
-import androidx.core.graphics.contains
+import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.navArgs
 import com.pinatafarms.app.R
 import com.pinatafarms.app.databinding.FragmentPersonDetailsBinding
-import com.pinatafarms.data.utils.centerPointF
-import com.pinatafarms.data.source.image.PersonBitmapLruCacheDataSource
+import com.pinatafarms.data.AppDispatchers
+import com.pinatafarms.domain.entities.PersonFaceVisualizationResults
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -24,7 +26,9 @@ class PersonDetailsFragment : Fragment(), KoinComponent {
     private lateinit var binding: FragmentPersonDetailsBinding
 
     private val arguments: PersonDetailsFragmentArgs by navArgs()
-    private val bitmapLruCacheDataSource: PersonBitmapLruCacheDataSource by inject()
+
+    private val appDispatchers: AppDispatchers by inject()
+    private val personDetailsViewModel: PersonDetailsViewModel by viewModel()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         binding = FragmentPersonDetailsBinding.inflate(inflater, container, false)
@@ -34,42 +38,42 @@ class PersonDetailsFragment : Fragment(), KoinComponent {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        personDetailsViewModel.getPersonFaceVisualizationResults(arguments.personDetails)
+
         viewLifecycleOwner.lifecycleScope.launch {
-            renderFaceDetectionResults()
+            viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                personDetailsViewModel.faceVisualizationResults
+                    .onEach { renderFaceDetectionResults(it) }
+                    .flowOn(appDispatchers.MainImmediate)
+                    .launchIn(this)
+            }
         }
     }
 
-    private suspend fun renderFaceDetectionResults() {
-        val personDetails = arguments.personDetails
-        bitmapLruCacheDataSource.saveOrGetBitmapFromCache(personDetails.imagePath)?.let { bitmap ->
-            val faceBounds = personDetails.faceBounds
-            if (personDetails.hasFaceBeenDetected && faceBounds != null) {
-                if (!bitmap.contains(faceBounds.centerPointF)) {
-                    binding.personViewData = PersonDetailsViewData(
-                        thumbnail = bitmap,
-                        showErrorMessage = true,
-                        errorMessage = requireContext().getString(R.string.detected_face_out_of_bounds_error_message)
-                    )
-                } else {
-                    val paint = Paint().apply {
-                        strokeWidth = 5f
-                        color = Color.RED
-                        style = Paint.Style.STROKE
-                    }
-                    val mutableBitmap = bitmap.copy(
-                        Bitmap.Config.RGB_565, true
-                    ).applyCanvas { drawRect(faceBounds, paint) }
-                    binding.personViewData = PersonDetailsViewData(
-                        thumbnail = mutableBitmap,
-                        showErrorMessage = false
-                    )
-                }
-            } else {
+    private fun renderFaceDetectionResults(personFaceVisualizationResults: PersonFaceVisualizationResults?) {
+        when (personFaceVisualizationResults) {
+            is PersonFaceVisualizationResults.SuccessfulPersonFaceVisualization -> {
                 binding.personViewData = PersonDetailsViewData(
-                    thumbnail = bitmap,
+                    thumbnail = personFaceVisualizationResults.bitmap,
+                    showErrorMessage = false
+                )
+            }
+            is PersonFaceVisualizationResults.FaceNotDetectedError -> {
+                binding.personViewData = PersonDetailsViewData(
+                    thumbnail = personFaceVisualizationResults.bitmap,
                     showErrorMessage = true,
                     errorMessage = requireContext().getString(R.string.face_not_detected_error_message)
                 )
+            }
+            is PersonFaceVisualizationResults.FaceOutOfBoundsError -> {
+                binding.personViewData = PersonDetailsViewData(
+                    thumbnail = personFaceVisualizationResults.bitmap,
+                    showErrorMessage = true,
+                    errorMessage = requireContext().getString(R.string.detected_face_out_of_bounds_error_message)
+                )
+            }
+            null -> {
+                Toast.makeText(requireContext(), "An error occurred", Toast.LENGTH_LONG).show()
             }
         }
     }

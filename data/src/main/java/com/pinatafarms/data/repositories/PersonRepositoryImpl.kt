@@ -1,9 +1,11 @@
 package com.pinatafarms.data.repositories
 
 import com.pinatafarms.data.AppDispatchers
+import com.pinatafarms.data.source.image.PersonFaceVisualizationDataSource
 import com.pinatafarms.data.source.person.PersonDataSource
 import com.pinatafarms.data.source.person.PersonFaceDetectionDataSource
 import com.pinatafarms.domain.entities.Person
+import com.pinatafarms.domain.entities.PersonFaceVisualizationResults
 import com.pinatafarms.domain.repositories.PersonRepository
 import kotlinx.coroutines.withContext
 
@@ -16,9 +18,10 @@ import kotlinx.coroutines.withContext
  *  No other changes required.
  **/
 class PersonRepositoryImpl(
+    private val appDispatchers: AppDispatchers,
     private val personDataSource: PersonDataSource,
     private val personFaceDetectionDataSource: PersonFaceDetectionDataSource,
-    private val appDispatchers: AppDispatchers
+    private val personFaceVisualizationDataSource: PersonFaceVisualizationDataSource,
 ) : PersonRepository {
     override suspend fun getPersonList(): Result<List<Person>> = withContext(appDispatchers.IO) {
         personDataSource.getPersonList().fold(
@@ -28,5 +31,11 @@ class PersonRepositoryImpl(
                 Result.failure(it)
             }
         )
+    }
+
+    override suspend fun getPersonFaceVisualization(
+        personDetails: Person
+    ): PersonFaceVisualizationResults? = withContext(appDispatchers.Default) {
+        personFaceVisualizationDataSource.getFaceDetectionResults(personDetails)
     }
 }
