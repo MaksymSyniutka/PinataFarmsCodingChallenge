@@ -16,6 +16,8 @@ object Versions {
         const val constraintLayout = "2.1.1"
         const val viewModel = "2.3.1"
         const val recyclerView = "1.2.1"
+
+        //TODO: change to production version once released
         const val lifecycleRuntime = "2.4.0-rc01"
     }
 
